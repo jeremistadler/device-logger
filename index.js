@@ -58,7 +58,7 @@ noble.on('discover', device => {
     serviceSolicitationUuids,
   }
 
-  console.log('Device', data)
+  //console.log('Device', data)
 
   const dateAndHour = now.format('YYYY-MM-DD HH')
 
