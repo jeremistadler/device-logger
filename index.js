@@ -39,7 +39,10 @@ noble.on('discover', device => {
     ? manufacturerData.toString('base64')
     : null
 
-  //serviceData = serviceData ? serviceData.toString('base64') : null
+  serviceData =
+    serviceData && serviceData.data
+      ? { id: serviceData.uuid, data: serviceData.data.toString('base64') }
+      : null
 
   const data = {
     id,
