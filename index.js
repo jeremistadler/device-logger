@@ -9,7 +9,7 @@ const noble = require('noble')
 const Redis = require('ioredis')
 const moment = require('moment')
 
-const redis = new Redis(6379, '192.168.1.201')
+const redis = new Redis()
 
 noble.on('stateChange', state => {
   console.log('==== Changed state to', state)
@@ -61,26 +61,38 @@ noble.on('discover', device => {
   //console.log('Device', data)
 
   const dateAndHour = now.format('YYYY-MM-DD HH')
+  const pipeline = redis.pipeline()
 
-  redis.set(`last:byId:${id}:rssi`, rssi)
-  redis.set(`last:byId:${id}:state`, state)
-  redis.set(`last:byId:${id}:addressType`, addressType)
-  redis.set(`last:byId:${id}:localName`, localName)
-  redis.set(`last:byId:${id}:txPowerLevel`, txPowerLevel)
-  redis.set(`last:byId:${id}:date`, now.format())
-  redis.set(`last:byId:${id}:time`, now.valueOf())
+  pipeline.set(`last:byId:${id}:rssi`, rssi)
+  pipeline.set(`last:byId:${id}:state`, state)
+  pipeline.set(`last:byId:${id}:addressType`, addressType)
+  pipeline.set(`last:byId:${id}:localName`, localName)
+  pipeline.set(`last:byId:${id}:txPowerLevel`, txPowerLevel)
+  pipeline.set(`last:byId:${id}:date`, now.format())
+  pipeline.set(`last:byId:${id}:time`, now.valueOf())
 
-  redis.incr(`hits:byId:${id}`)
-  redis.incr(`hits:byHour:${dateAndHour}`)
-  redis.incr(`hits:byIdHour:${id}:${dateAndHour}`)
-  redis.incr(`hits:byHourId:${dateAndHour}:${id}`)
+  pipeline.incr(`hits:byId:${id}`)
+  pipeline.incr(`hits:byHour:${dateAndHour}`)
+  pipeline.incr(`hits:byIdHour:${id}:${dateAndHour}`)
+  pipeline.incr(`hits:byHourId:${dateAndHour}:${id}`)
 
-  redis.zadd(`rssi:byId:${id}`, now.valueOf(), rssi)
-  redis.zadd(`txPowerLevel:byId:${id}`, now.valueOf(), txPowerLevel)
+  pipeline.zadd(`rssi:byId:${id}`, now.valueOf(), rssi)
+  pipeline.zadd(`txPowerLevel:byId:${id}`, now.valueOf(), txPowerLevel)
 
-  redis.zincrby(`state:byId:${id}`, 1, state || 'null')
-  redis.zincrby(`manufacturerData:byId:${id}`, 1, manufacturerData || 'null')
-  redis.zincrby(`localname:byId:${id}`, 1, localName || 'null')
+  pipeline.zincrby(`state:byId:${id}`, 1, state || 'null')
+  pipeline.zincrby(`manufacturerData:byId:${id}`, 1, manufacturerData || 'null')
+  pipeline.zincrby(`localname:byId:${id}`, 1, localName || 'null')
 
-  redis.rpush(`all`, JSON.stringify(data))
+  pipeline.rpush(`all`, JSON.stringify(data))
+
+  pipeline
+    .exec()
+    .then(results => {
+      const errors = results.map(f => f[0]).filter(Boolean)
+      if (errors.length > 0) console.log('errors: ', errors)
+    })
+    .catch(err => {
+      // result === [[null, 'OK'], [null, 'bar']]
+      console.log('errors: ', err)
+    })
 })
