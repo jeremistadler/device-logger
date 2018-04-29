@@ -12,7 +12,7 @@ const moment = require('moment')
 const redis = new Redis(6379, '192.168.1.201')
 
 noble.on('stateChange', state => {
-  console.log('==== Changed state to ', state)
+  console.log('==== Changed state to', state)
   if (state === 'poweredOn') {
     noble.startScanning([], true)
   }
@@ -42,17 +42,17 @@ noble.on('discover', device => {
   //serviceData = serviceData ? serviceData.toString('base64') : null
 
   const data = {
-    id: uuid,
-    rssi: rssi,
-    state: state,
-    addressType: addressType,
+    id,
+    rssi,
+    state,
+    addressType,
 
-    localName: localName,
-    manufacturerData: manufacturerData,
-    txPowerLevel: txPowerLevel,
-    serviceData: serviceData,
-    solicitationServiceUuids: solicitationServiceUuids,
-    serviceSolicitationUuids: serviceSolicitationUuids,
+    localName,
+    manufacturerData,
+    txPowerLevel,
+    serviceData,
+    solicitationServiceUuids,
+    serviceSolicitationUuids,
   }
 
   console.log('Device', data)
