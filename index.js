@@ -83,7 +83,7 @@ noble.on('discover', device => {
   pipeline.zincrby(`manufacturerData:byId:${id}`, 1, manufacturerData || 'null')
   pipeline.zincrby(`localname:byId:${id}`, 1, localName || 'null')
 
-  pipeline.rpush(`all`, JSON.stringify(data))
+  //pipeline.rpush(`all`, JSON.stringify(data))
 
   pipeline
     .exec()

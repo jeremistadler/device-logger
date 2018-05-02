@@ -5,6 +5,9 @@
   "repository": "https://github.com/jeremistadler/device-logger.git",
   "author": "Jeremi Stadler <stadler.jeremi@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "start": "sudo hciconfig hci0 up"
+  },
   "dependencies": {
     "ioredis": "^3.2.2",
     "moment": "^2.22.1",
