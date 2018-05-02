@@ -9,7 +9,11 @@ const noble = require('noble')
 const Redis = require('ioredis')
 const moment = require('moment')
 
-const redis = new Redis()
+const redis = new Redis({
+  connectionName: 'DeviceLogger',
+  dropBufferSupport: true,
+  password: 'hej123',
+})
 
 noble.on('stateChange', state => {
   console.log('==== Changed state to', state)
