@@ -48,6 +48,12 @@ noble.on('discover', device => {
       ? { id: serviceData.uuid, data: serviceData.data.toString('base64') }
       : null
 
+  rssi = rssi == null ? 'null' : rssi
+  txPowerLevel = txPowerLevel == null ? 'null' : txPowerLevel
+  localName = localName == null ? 'null' : localName
+  addressType = addressType == null ? 'null' : addressType
+  state = state == null ? 'null' : state
+
   const data = {
     id,
     rssi,
@@ -65,6 +71,7 @@ noble.on('discover', device => {
   //console.log('Device', data)
 
   const dateAndHour = now.format('YYYY-MM-DD HH')
+  const dateHourMinute = now.format('YYYY-MM-DD HH:mm')
   const pipeline = redis.pipeline()
 
   pipeline.set(`last:byId:${id}:rssi`, rssi)
@@ -77,12 +84,24 @@ noble.on('discover', device => {
 
   pipeline.incr(`hits:byId:${id}`)
   pipeline.incr(`hits:byHour:${dateAndHour}`)
+  pipeline.incr(`hits:byMinute:${dateHourMinute}`)
   pipeline.incr(`hits:byIdHour:${id}:${dateAndHour}`)
+  pipeline.incr(`hits:byIdMinute:${id}:${dateHourMinute}`)
   pipeline.incr(`hits:byHourId:${dateAndHour}:${id}`)
+  pipeline.incr(`hits:byMinuteId:${dateHourMinute}:${id}`)
 
   pipeline.zadd(`rssi:byId:${id}`, now.valueOf(), rssi)
   pipeline.zadd(`txPowerLevel:byId:${id}`, now.valueOf(), txPowerLevel)
+  pipeline.zadd(`addressType:byId:${id}`, now.valueOf(), addressType)
 
+  pipeline.sadd(`id:seenByPower:${txPowerLevel}`, id)
+  pipeline.sadd(`id:seenByName:${localName}`, id)
+  pipeline.sadd(`id:seenByState:${state}`, id)
+  pipeline.sadd(`id:seenByAddressType:${addressType}`, id)
+  pipeline.sadd(`id:seenByData:${manufacturerData || 'null'}`, id)
+  pipeline.sadd(`id:all`, id)
+
+  pipeline.zincrby(`seen:byId`, 1, id || 'null')
   pipeline.zincrby(`state:byId:${id}`, 1, state || 'null')
   pipeline.zincrby(`manufacturerData:byId:${id}`, 1, manufacturerData || 'null')
   pipeline.zincrby(`localname:byId:${id}`, 1, localName || 'null')
