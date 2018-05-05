@@ -132,7 +132,14 @@ noble.on('discover', device => {
     (statusById == null || statusById === 'CLOSED') &&
     (id === 'ffff3ef238ad' || id === 'ffffc1114592')
   ) {
-    openConn(device, id)
+    noble.stopScanning()
+    setTimeout(() => {
+      openConn(device, id)
+    }, 1000)
+
+    setTimeout(() => {
+      noble.startScanning([], true)
+    }, 3000)
   }
 })
 
@@ -189,7 +196,6 @@ function openConn(device, id) {
     if (connectErr) {
       console.log(id, '...Connect err', connectErr)
       StatusesById.set(id, 'CLOSED')
-      readCharacter(device, id)
       return
     }
     console.log(id, '...Connected!')
