@@ -179,6 +179,24 @@ function readCharacter(device, id) {
       if (infoErr) console.log(id, 'Info Error', infoErr)
       if (characteristics)
         characteristics.forEach(ch => {
+          ch.once('notify', data => {
+            console.log(
+              id,
+              'Got raw notify, asHex:',
+              data.toString('hex'),
+              'asString:',
+              data.toString()
+            )
+          })
+          ch.once('data', data => {
+            console.log(
+              id,
+              'Got raw data, asHex:',
+              data.toString('hex'),
+              'asString:',
+              data.toString()
+            )
+          })
           ch.read((readErr, data) => {
             if (readErr) console.log(id, ch.name, 'Char Read err', readErr)
             if (data)
