@@ -145,6 +145,14 @@ noble.on('discover', device => {
         console.log(id, 'new rssi', newRssi)
         pipeline.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
       })
+      peripheral.once('disconnect', () => {
+        console.log(id, 'Connection Opened')
+        StatusesById.set(id, 'CONNECTED')
+      })
+      peripheral.once('disconnect', () => {
+        console.log(id, 'Connection closed')
+        StatusesById.set(id, 'CLOSED')
+      })
       device.discoverAllServicesAndCharacteristics(
         (infoErr, services, characteristics) => {
           if (infoErr) console.log(id, 'Info Error', infoErr)
