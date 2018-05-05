@@ -132,11 +132,11 @@ noble.on('discover', device => {
     statusById == null ||
     (statusById === 'CLOSED' && ['ffff3ef238ad', 'ffffc1114592'].includes(id))
   ) {
-    openConn(id)
+    openConn(device, id)
   }
 })
 
-function openConn(id) {
+function openConn(device, id) {
   console.log(id, 'Connecting...')
   StatusesById.set(id, 'CONNECTING')
   device.connect(connectErr => {
