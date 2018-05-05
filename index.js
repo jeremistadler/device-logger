@@ -100,7 +100,7 @@ noble.on('discover', device => {
   pipeline.sadd(`id:seenByAddressType:${addressType}`, id)
   pipeline.sadd(`id:seenByData:${manufacturerData || 'null'}`, id)
   pipeline.sadd(`id:all`, id)
-  pipeline.zadd(`id:firstSeen`, now.valueOf(), 'NX', id)
+  pipeline.zadd(`id:firstSeen`, 'NX', now.valueOf(), id)
   pipeline.zadd(`id:lastSeen`, now.valueOf(), id)
 
   pipeline.zincrby(`seen:byId`, 1, id || 'null')
