@@ -25,6 +25,8 @@ noble.on('stateChange', state => {
 })
 
 noble.on('warning', warning => console.log('Warn:', warning))
+noble.on('scanStart', () => console.log('Scan started'))
+noble.on('scanStop', () => console.log('Scan stopped'))
 
 noble.on('discover', device => {
   const now = moment()
@@ -128,6 +130,15 @@ noble.on('discover', device => {
 
   const statusById = StatusesById.get(id)
 
+  device.updateRssi((err, newRssi) => {
+    if (err) {
+      console.log(id, 'update rssi error', err)
+    } else {
+      console.log(id, 'new rssi', newRssi)
+      redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
+    }
+  })
+
   if (
     (statusById == null || statusById === 'CLOSED') &&
     (id === 'ffff3ef238ad' || id === 'ffffc1114592')
@@ -136,7 +147,7 @@ noble.on('discover', device => {
     noble.stopScanning()
     setTimeout(() => {
       openConn(device, id)
-    }, 2000)
+    }, 3000)
 
     setTimeout(() => {
       console.log('Starting scan')
@@ -203,7 +214,7 @@ function openConn(device, id) {
     console.log(id, '...Connected!')
     device.once('rssiUpdate', newRssi => {
       console.log(id, 'new rssi', newRssi)
-      pipeline.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
+      redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
     })
     device.once('disconnect', () => {
       console.log(id, 'Connection Opened')
@@ -212,6 +223,20 @@ function openConn(device, id) {
     device.once('disconnect', () => {
       console.log(id, 'Connection closed')
       StatusesById.set(id, 'CLOSED')
+    })
+
+    device.once('rssiUpdate', newRssi => {
+      console.log(id, 'new rssi', newRssi)
+      redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
+    })
+
+    device.updateRssi((err, newRssi) => {
+      if (err) {
+        console.log(id, 'update rssi error', err)
+      } else {
+        console.log(id, 'new rssi', newRssi)
+        redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
+      }
     })
 
     readCharacter(device, id)
