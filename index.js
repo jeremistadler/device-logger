@@ -128,17 +128,34 @@ noble.on('discover', device => {
       console.log('errors: ', err)
     })
 
-  const statusById = StatusesById.get(id)
+  let statusById = StatusesById.get(id)
+  if (statusById == null) {
+    device.once('rssiUpdate', newRssi => {
+      console.log(id, 'new rssi', newRssi)
+      redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
+    })
+    device.once('disconnect', () => {
+      console.log(id, 'Connection Opened')
+      StatusesById.set(id, 'CONNECTED')
+    })
+    device.once('disconnect', () => {
+      console.log(id, 'Connection closed')
+      StatusesById.set(id, 'CLOSED')
+    })
+
+    statusById = 'CLOSED'
+    StatusesById.set(id, statusById)
+  }
 
   if (
-    (statusById == null || statusById === 'CLOSED') &&
+    statusById === 'CLOSED' &&
     (id === 'ffff3ef238ad' || id === 'ffffc1114592')
   ) {
     console.log('Stopping scan to connect to ', id)
     noble.stopScanning()
     setTimeout(() => {
       openConn(device, id)
-    }, 3000)
+    }, 4000)
 
     setTimeout(() => {
       console.log('Starting scan')
@@ -160,10 +177,11 @@ function readCharacter(device, id) {
             if (data)
               console.log(
                 id,
-                'Character data from',
-                ch.name,
-                data.toString(),
-                data.toString('hex')
+                `Character data from: "${ch.name}"`,
+                'asHex:',
+                data.toString('hex'),
+                'asString:',
+                data.toString()
               )
           })
           // ch.subscribe(subError => {
@@ -174,15 +192,17 @@ function readCharacter(device, id) {
             if (descriptors) {
               console.log(id, 'Descriptors', descriptors)
               descriptors.forEach(des => {
+                console.log(id, ch.name, 'Descriptor', des)
                 des.readValue((readErr, data) => {
                   if (readErr) console.log(id, ch.name, 'Des Read err', readErr)
                   if (data)
                     console.log(
                       id,
-                      'Descriptor data from',
-                      ch.name,
-                      data.toString(),
-                      data.toString('hex')
+                      `Descriptor data from: "${ch.name}"`,
+                      'asHex:',
+                      data.toString('hex'),
+                      'asString:',
+                      data.toString()
                     )
                 })
               })
@@ -203,23 +223,6 @@ function openConn(device, id) {
       return
     }
     console.log(id, '...Connected!')
-    device.once('rssiUpdate', newRssi => {
-      console.log(id, 'new rssi', newRssi)
-      redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
-    })
-    device.once('disconnect', () => {
-      console.log(id, 'Connection Opened')
-      StatusesById.set(id, 'CONNECTED')
-    })
-    device.once('disconnect', () => {
-      console.log(id, 'Connection closed')
-      StatusesById.set(id, 'CLOSED')
-    })
-
-    device.once('rssiUpdate', newRssi => {
-      console.log(id, 'new rssi', newRssi)
-      redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
-    })
 
     device.updateRssi((err, newRssi) => {
       if (err) {
