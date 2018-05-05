@@ -8,6 +8,8 @@ https://github.com/luin/ioredis
 const noble = require('noble')
 const Redis = require('ioredis')
 const moment = require('moment')
+const stringify = require('fast-safe-stringify')
+const fs = require('fs')
 
 const StatusesById = new Map()
 
@@ -178,6 +180,14 @@ noble.on('discover', device => {
 function readCharacter(device, id) {
   device.discoverAllServicesAndCharacteristics(
     (infoErr, services, characteristics) => {
+      fs.writeFile(
+        '/home/pi/device-logger/' + id + '-' + 'info',
+        stringify({ infoErr, services, characteristics }),
+        writeFileErr => {
+          if (writeFileErr) return console.log(writeFileErr)
+        }
+      )
+
       if (infoErr) console.log(id, 'Info Error', infoErr)
       if (characteristics)
         characteristics.forEach(ch => {
