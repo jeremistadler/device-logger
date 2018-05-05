@@ -136,6 +136,52 @@ noble.on('discover', device => {
   }
 })
 
+function readCharacter(device, id) {
+  device.discoverAllServicesAndCharacteristics(
+    (infoErr, services, characteristics) => {
+      if (infoErr) console.log(id, 'Info Error', infoErr)
+      console.log(id, { services, characteristics })
+
+      if (characteristics)
+        characteristics.forEach(ch => {
+          ch.read((readErr, data) => {
+            if (readErr) console.log(id, ch.name, 'Char Read err', readErr)
+            if (data)
+              console.log(
+                id,
+                'Character data from',
+                ch.name,
+                data.toString(),
+                data.toString('hex')
+              )
+          })
+          // ch.subscribe(subError => {
+          //   console.log('Could not subscribe to character ', id, ch)
+          // })
+          ch.discoverDescriptors((desErr, descriptors) => {
+            if (desErr) console.log(id, 'Read descriptior err', desErr)
+            if (descriptors) {
+              console.log(id, 'Descriptors', descriptors)
+              descriptors.forEach(des => {
+                des.readValue((readErr, data) => {
+                  if (readErr) console.log(id, ch.name, 'Des Read err', readErr)
+                  if (data)
+                    console.log(
+                      id,
+                      'Descriptor data from',
+                      ch.name,
+                      data.toString(),
+                      data.toString('hex')
+                    )
+                })
+              })
+            }
+          })
+        })
+    }
+  )
+}
+
 function openConn(device, id) {
   console.log(id, 'Connecting...')
   StatusesById.set(id, 'CONNECTING')
@@ -143,6 +189,7 @@ function openConn(device, id) {
     if (connectErr) {
       console.log(id, '...Connect err', connectErr)
       StatusesById.set(id, 'CLOSED')
+      readCharacter(device, id)
       return
     }
     console.log(id, '...Connected!')
@@ -158,49 +205,7 @@ function openConn(device, id) {
       console.log(id, 'Connection closed')
       StatusesById.set(id, 'CLOSED')
     })
-    device.discoverAllServicesAndCharacteristics(
-      (infoErr, services, characteristics) => {
-        if (infoErr) console.log(id, 'Info Error', infoErr)
-        console.log(id, { services, characteristics })
 
-        if (characteristics)
-          characteristics.forEach(ch => {
-            ch.read((readErr, data) => {
-              if (readErr) console.log(id, ch.name, 'Char Read err', readErr)
-              if (data)
-                console.log(
-                  id,
-                  'Character data from',
-                  ch.name,
-                  data.toString(),
-                  data.toString('hex')
-                )
-            })
-            // ch.subscribe(subError => {
-            //   console.log('Could not subscribe to character ', id, ch)
-            // })
-            ch.discoverDescriptors((desErr, descriptors) => {
-              if (desErr) console.log(id, 'Read descriptior err', desErr)
-              if (descriptors) {
-                console.log(id, 'Descriptors', descriptors)
-                descriptors.forEach(des => {
-                  des.readValue((readErr, data) => {
-                    if (readErr)
-                      console.log(id, ch.name, 'Des Read err', readErr)
-                    if (data)
-                      console.log(
-                        id,
-                        'Descriptor data from',
-                        ch.name,
-                        data.toString(),
-                        data.toString('hex')
-                      )
-                  })
-                })
-              }
-            })
-          })
-      }
-    )
+    readCharacter(device, id)
   })
 }
