@@ -215,15 +215,15 @@ function readCharacter(device, id) {
             console.log(id, 'Could not subscribe to character ', ch.name)
           })
 
-          if (ch.name === 'Alert Level') {
-            setTimeout(() => {
-              ch.write(Buffer.from([0xff]), true, writeError => {
-                if (writeError)
-                  console.log(id, ch.name, 'Write error', writeError)
-                else console.log(id, ch.name, 'Wrote data')
-              })
-            }, 500)
-          }
+          // if (ch.name === 'Alert Level') {
+          //   setTimeout(() => {
+          //     ch.write(Buffer.from([0xff]), true, writeError => {
+          //       if (writeError)
+          //         console.log(id, ch.name, 'Write error', writeError)
+          //       else console.log(id, ch.name, 'Wrote data')
+          //     })
+          //   }, 500)
+          // }
 
           ch.discoverDescriptors((desErr, descriptors) => {
             if (desErr) console.log(id, 'Read descriptior err', desErr)
