@@ -121,7 +121,7 @@ noble.on('discover', device => {
       console.log('errors: ', err)
     })
 
-  if (['ffff3ef238ad', 'ffffc1114592'].includes(uuid)) {
+  if (['ffff3ef238ad', 'ffffc1114592'].includes(id)) {
     console.log('connecting to ' + localName)
     device.connect(connectErr => {
       if (connectErr) {
