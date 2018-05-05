@@ -162,6 +162,7 @@ noble.on('discover', device => {
     (id === 'ffff3ef238ad' || id === 'ffffc1114592')
   ) {
     console.log('Stopping scan to connect to ', id)
+    StatusesById.set(id, 'WAIT_TO_CONNECT')
     noble.stopScanning()
     setTimeout(() => {
       openConn(device, id)
@@ -215,10 +216,13 @@ function readCharacter(device, id) {
           })
 
           if (ch.name === 'Alert Level') {
-            ch.write(Buffer.from([0x01]), false, writeError => {
-              if (writeError)
-                console.log(id, ch.name, 'Write error', writeError)
-            })
+            setTimeout(() => {
+              ch.write(Buffer.from([0xff]), true, writeError => {
+                if (writeError)
+                  console.log(id, ch.name, 'Write error', writeError)
+                else console.log(id, ch.name, 'Wrote data')
+              })
+            }, 500)
           }
 
           ch.discoverDescriptors((desErr, descriptors) => {
