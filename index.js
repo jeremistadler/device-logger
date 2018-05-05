@@ -142,6 +142,15 @@ noble.on('discover', device => {
       console.log(id, 'Connection closed')
       StatusesById.set(id, 'CLOSED')
     })
+    device.once('data', data => {
+      console.log(
+        id,
+        'Got raw data, asHex:',
+        data.toString('hex'),
+        'asString:',
+        data.toString()
+      )
+    })
 
     statusById = 'CLOSED'
     StatusesById.set(id, statusById)
@@ -168,8 +177,6 @@ function readCharacter(device, id) {
   device.discoverAllServicesAndCharacteristics(
     (infoErr, services, characteristics) => {
       if (infoErr) console.log(id, 'Info Error', infoErr)
-      console.log(id, { services, characteristics })
-
       if (characteristics)
         characteristics.forEach(ch => {
           ch.read((readErr, data) => {
@@ -184,9 +191,9 @@ function readCharacter(device, id) {
                 data.toString()
               )
           })
-          // ch.subscribe(subError => {
-          //   console.log('Could not subscribe to character ', id, ch)
-          // })
+          ch.subscribe(subError => {
+            console.log(id, 'Could not subscribe to character ', ch.name)
+          })
           ch.discoverDescriptors((desErr, descriptors) => {
             if (desErr) console.log(id, 'Read descriptior err', desErr)
             if (descriptors) {
