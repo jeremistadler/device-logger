@@ -129,8 +129,8 @@ noble.on('discover', device => {
   const statusById = StatusesById.get(id)
 
   if (
-    statusById == null ||
-    (statusById === 'CLOSED' && ['ffff3ef238ad', 'ffffc1114592'].includes(id))
+    (statusById == null || statusById === 'CLOSED') &&
+    (id === 'ffff3ef238ad' || id === 'ffffc1114592')
   ) {
     openConn(device, id)
   }
