@@ -166,10 +166,10 @@ noble.on('discover', device => {
       openConn(device, id)
     }, 4000)
 
-    setTimeout(() => {
-      console.log('Starting scan')
-      noble.startScanning([], true)
-    }, 5000)
+    // setTimeout(() => {
+    //   console.log('Starting scan')
+    //   noble.startScanning([], true)
+    // }, 5000)
   }
 })
 
