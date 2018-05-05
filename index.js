@@ -130,15 +130,6 @@ noble.on('discover', device => {
 
   const statusById = StatusesById.get(id)
 
-  device.updateRssi((err, newRssi) => {
-    if (err) {
-      console.log(id, 'update rssi error', err)
-    } else {
-      console.log(id, 'new rssi', newRssi)
-      redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
-    }
-  })
-
   if (
     (statusById == null || statusById === 'CLOSED') &&
     (id === 'ffff3ef238ad' || id === 'ffffc1114592')
