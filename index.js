@@ -130,19 +130,19 @@ noble.on('discover', device => {
 
   let statusById = StatusesById.get(id)
   if (statusById == null) {
-    device.once('rssiUpdate', newRssi => {
+    device.on('rssiUpdate', newRssi => {
       console.log(id, 'new rssi', newRssi)
       redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
     })
-    device.once('disconnect', () => {
+    device.on('connect', () => {
       console.log(id, 'Connection Opened')
       StatusesById.set(id, 'CONNECTED')
     })
-    device.once('disconnect', () => {
+    device.on('disconnect', () => {
       console.log(id, 'Connection closed')
       StatusesById.set(id, 'CLOSED')
     })
-    device.once('data', data => {
+    device.on('data', data => {
       console.log(
         id,
         'Got raw data, asHex:',
@@ -179,7 +179,7 @@ function readCharacter(device, id) {
       if (infoErr) console.log(id, 'Info Error', infoErr)
       if (characteristics)
         characteristics.forEach(ch => {
-          ch.once('notify', data => {
+          ch.on('notify', data => {
             console.log(
               id,
               'Got raw notify, asHex:',
@@ -188,7 +188,7 @@ function readCharacter(device, id) {
               data.toString()
             )
           })
-          ch.once('data', data => {
+          ch.on('data', data => {
             console.log(
               id,
               'Got raw data, asHex:',
@@ -212,6 +212,14 @@ function readCharacter(device, id) {
           ch.subscribe(subError => {
             console.log(id, 'Could not subscribe to character ', ch.name)
           })
+
+          if (ch.name === 'Alert Level') {
+            ch.write(Buffer.from([0x01]), true, writeError => {
+              if (writeError)
+                console.log(id, ch.name, 'Write error', writeError)
+            })
+          }
+
           ch.discoverDescriptors((desErr, descriptors) => {
             if (desErr) console.log(id, 'Read descriptior err', desErr)
             if (descriptors) {
