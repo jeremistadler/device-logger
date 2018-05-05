@@ -37,8 +37,12 @@ function avg(arr) {
 function generate(req, res) {
   redis
     .smembers('id:all')
-    .then(ids => {
-      return Promise.all(ids.map(getItemsForId))
+    .then(ids => Promise.all([getAllRssi(ids), getAllNames(ids)]))
+    .then(([rssis, names]) => {
+      rssis.forEach((item, index) => {
+        item.name = names[index]
+      })
+      return rssis
     })
     .then(itemsToHtml)
     .then(html => {
@@ -57,12 +61,12 @@ function itemsToHtml(allItems) {
     allItems[0].minTime
   )
   const diffTime = maxTime - minTime
-  const TOTAL_SLOTS = 1000
+  const TOTAL_SLOTS = 600
 
   allItems.sort((a, b) => a.minTime - b.minTime)
 
   return toHtml(
-    allItems.map(({ items, id }) => {
+    allItems.map(({ items, id, name }) => {
       const line = [...new Array(TOTAL_SLOTS)].map(x => [])
       items.forEach(item => {
         const pos = Math.floor(
@@ -70,7 +74,7 @@ function itemsToHtml(allItems) {
         )
         line[pos].push(item)
       })
-      return { line, id }
+      return { line, id, name }
     })
   )
 }
@@ -95,24 +99,56 @@ function toHash(id) {
 }
 
 function idToHue(id) {
-  console.log(toHash(id))
   return Math.abs(toHash(id) % 360)
 }
 
-function getItemsForId(id) {
-  return redis.zrange('rssi:byId:' + id, 0, -1, 'WITHSCORES').then(result => {
-    const items = []
-    for (let i = 0; i < result.length; i += 2) {
-      items.push({
-        rssi: parseInt(result[i], 10),
-        time: parseInt(result[i + 1], 10),
-      })
-    }
+function getAllRssi(ids) {
+  const pipeline = redis.pipeline()
 
-    const maxTime = items.reduce((a, b) => Math.max(a, b.time), items[0].time)
-    const minTime = items.reduce((a, b) => Math.min(a, b.time), items[0].time)
+  ids.forEach(id =>
+    pipeline.zrangebyscore(
+      'rssi:byId:' + id,
+      1525219200000,
+      Infinity,
+      'WITHSCORES'
+    )
+  )
 
-    return { items, maxTime, minTime, id }
+  return pipeline.exec().then(pipeResult => {
+    return pipeResult.map(f => f[1]).map((r, index) => {
+      const id = ids[index]
+      const items = []
+
+      for (let i = 0; i < r.length; i += 2) {
+        items.push({
+          rssi: parseInt(r[i], 10),
+          time: parseInt(r[i + 1], 10),
+        })
+      }
+
+      const maxTime = items.reduce((a, b) => Math.max(a, b.time), items[0].time)
+      const minTime = items.reduce((a, b) => Math.min(a, b.time), items[0].time)
+
+      return { items, maxTime, minTime, id }
+    })
+  })
+}
+
+function getAllNames(ids) {
+  const pipeline = redis.pipeline()
+
+  ids.forEach(id => pipeline.zrange('localname:byId:' + id, 0, -1))
+
+  return pipeline.exec().then(pipeResult => {
+    return pipeResult.map(f => f[1]).map((names, index) => {
+      const id = ids[index]
+      const filtered = names
+        .filter(Boolean)
+        .filter(f => f !== 'null' && f.trim() !== '')
+
+      if (filtered.length === 0) return id
+      return filtered[0]
+    })
   })
 }
 
@@ -147,9 +183,12 @@ function toHtml(lines) {
             <div class=items>
               ${lines
                 .map(
-                  ({ line, id }) => `
+                  ({ line, id, name }) => `
                     <div class="item">
-                      ${id}
+                      <span style="    width: 160px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;">${name}</span>
                       ${line
                         .map(
                           itemsAtPos => `<div class="box" style="
