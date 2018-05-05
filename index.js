@@ -9,6 +9,8 @@ const noble = require('noble')
 const Redis = require('ioredis')
 const moment = require('moment')
 
+const StatusesById = new Map()
+
 const redis = new Redis({
   connectionName: 'DeviceLogger',
   dropBufferSupport: true,
@@ -124,17 +126,67 @@ noble.on('discover', device => {
       console.log('errors: ', err)
     })
 
-  if (['ffff3ef238ad', 'ffffc1114592'].includes(id)) {
-    console.log('connecting to ' + localName)
+  const statusById = StatusesById.get(id)
+
+  if (
+    statusById == null ||
+    (statusById === 'CLOSED' && ['ffff3ef238ad', 'ffffc1114592'].includes(id))
+  ) {
+    console.log(id, 'Connecting...')
+    StatusesById.set(id, 'CONNECTING')
     device.connect(connectErr => {
       if (connectErr) {
-        console.log('...Connect err to', localName, connectErr)
+        console.log(id, '...Connect err', connectErr)
+        StatusesById.set(id, 'CLOSED')
         return
       }
-      console.log('...Connected to', localName)
+      console.log(id, '...Connected!')
+      device.once('rssiUpdate', newRssi => {
+        console.log(id, 'new rssi', newRssi)
+        pipeline.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
+      })
       device.discoverAllServicesAndCharacteristics(
         (infoErr, services, characteristics) => {
-          console.log({ infoErr, services, characteristics })
+          if (infoErr) console.log(id, 'Info Error', infoErr)
+          console.log(id, { services, characteristics })
+
+          if (characteristics)
+            characteristics.forEach(ch => {
+              ch.read((readErr, data) => {
+                if (readErr) console.log(id, ch.name, 'Char Read err', readErr)
+                if (data)
+                  console.log(
+                    id,
+                    'Character data from',
+                    ch.name,
+                    data.toString(),
+                    data.toString('hex')
+                  )
+              })
+              // ch.subscribe(subError => {
+              //   console.log('Could not subscribe to character ', id, ch)
+              // })
+              ch.discoverDescriptors((desErr, descriptors) => {
+                if (desErr) console.log(id, 'Read descriptior err', desErr)
+                if (descriptors) {
+                  console.log(id, 'Descriptors', descriptors)
+                  descriptors.forEach(des => {
+                    des.readValue((readErr, data) => {
+                      if (readErr)
+                        console.log(id, ch.name, 'Des Read err', readErr)
+                      if (data)
+                        console.log(
+                          id,
+                          'Descriptor data from',
+                          ch.name,
+                          data.toString(),
+                          data.toString('hex')
+                        )
+                    })
+                  })
+                }
+              })
+            })
         }
       )
     })
