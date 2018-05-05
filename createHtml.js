@@ -188,7 +188,7 @@ function toHtml(lines) {
                       <span style="    width: 160px;
     overflow: hidden;
     white-space: nowrap;
-    text-overflow: ellipsis;">${name}</span>
+    text-overflow: ellipsis;">${id} (${name})</span>
                       ${line
                         .map(
                           itemsAtPos => `<div class="box" style="

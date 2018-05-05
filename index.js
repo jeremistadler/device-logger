@@ -120,4 +120,20 @@ noble.on('discover', device => {
       // result === [[null, 'OK'], [null, 'bar']]
       console.log('errors: ', err)
     })
+
+  if (['ffff3ef238ad', 'ffffc1114592'].includes(uuid)) {
+    console.log('connecting to ' + localName)
+    device.connect(connectErr => {
+      if (connectErr) {
+        console.log('...Connect err to', localName, connectErr)
+        return
+      }
+      console.log('...Connected to', localName)
+      device.discoverAllServicesAndCharacteristics(
+        (infoErr, services, characteristics) => {
+          console.log({ infoErr, services, characteristics })
+        }
+      )
+    })
+  }
 })
