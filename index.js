@@ -130,6 +130,7 @@ noble.on('discover', device => {
 
   let statusById = StatusesById.get(id)
   if (statusById == null) {
+    console.log(id, 'Added new device', localName)
     device.on('rssiUpdate', newRssi => {
       console.log(id, 'new rssi', newRssi)
       redis.zadd(`rssi:byId:${id}`, Date.now(), newRssi)
@@ -214,7 +215,7 @@ function readCharacter(device, id) {
           })
 
           if (ch.name === 'Alert Level') {
-            ch.write(Buffer.from([0x01]), true, writeError => {
+            ch.write(Buffer.from([0x01]), false, writeError => {
               if (writeError)
                 console.log(id, ch.name, 'Write error', writeError)
             })
