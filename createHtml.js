@@ -75,13 +75,15 @@ function itemsToHtml(allItems) {
         line[pos].push(item)
       })
       return { line, id, name }
-    })
+    }),
+    minTime,
+    maxTime
   )
 }
 
 function normalizeRssi(rssi) {
   if (rssi == null) return 0
-  return 1
+  //return 1
   return 1 - rssi * -0.01
 }
 
@@ -152,7 +154,11 @@ function getAllNames(ids) {
   })
 }
 
-function toHtml(lines) {
+function timeToPercentage(min, max, value) {
+  return (value - min) / (max - min) * 100
+}
+
+function toHtml(lines, minTime, maxTime) {
   return `<!DOCTYPE html>
         <html lang="en">
           <head>
@@ -167,15 +173,31 @@ function toHtml(lines) {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
               }
               .items {
-                display: block;
+                margin: 10px;
               }
-              .item {
-                display: inline-flex;
+              .line {
+                height: 15px;
+                display: flex;
               }
-              .box {
-                width: 2px;
+              .lineInner {
+                height: 15px;
+                position: relative;
+                    flex: 1;
+              }
+              .name {
+                width: 160px;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+              }
+              .point {
+                position: absolute;
+                top: 3px;
+                width: 10px;
                 height: 10px;
-                background-color: red;
+                border-width: 0.5px;
+                border-style: solid;
+                border-radius: 10px;
               }
             </style>
           </head>
@@ -184,22 +206,28 @@ function toHtml(lines) {
               ${lines
                 .map(
                   ({ line, id, name }) => `
-                    <div class="item">
-                      <span style="    width: 160px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;">${id} (${name})</span>
+                    <div class="line">
+                      <span class=name>${id} (${name})</span>
+                      <div class="lineInner">
                       ${line
+                        .filter(f => f.length > 0)
                         .map(
-                          itemsAtPos => `<div class="box" style="
-                        opacity: ${normalizeRssi(
-                          avg(itemsAtPos.map(f => f.rssi))
-                        )};
-                        background-color: hsl(${idToHue(id)}, 50%, 50%);
+                          itemsAtPos => `<div class="point" style="
+                          left: ${timeToPercentage(
+                            minTime,
+                            maxTime,
+                            avg(itemsAtPos.map(f => f.time))
+                          )}%;
+                        background-color: hsla(
+                          ${idToHue(id)},
+                          50%, 50%,
+                          ${normalizeRssi(avg(itemsAtPos.map(f => f.rssi)))}
+                        );
+                        border-color: hsla(${idToHue(id)}, 50%, 50%, 0.6);
                         "></div>`
                         )
                         .join('')}
-                    </div>`
+                    </div></div>`
                 )
                 .join('')}
             </div
