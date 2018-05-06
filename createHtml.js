@@ -146,8 +146,8 @@ function getAllNames(ids) {
         .filter(Boolean)
         .filter(f => f !== 'null' && f.trim() !== '')
 
-      if (filtered.length === 0) return id
-      return filtered[0]
+      if (filtered.length === 0) return ''
+      return filtered[0].trim()
     })
   })
 }

@@ -159,9 +159,15 @@ noble.on('discover', device => {
     StatusesById.set(id, statusById)
   }
 
+  const ids = [
+    'ffff3ef238ad', // AB Shutter 1
+    'ffffc1114592', // ITAG 1
+    '10f1f2ee8d51', // Jeremis Telefon
+  ]
+
   if (
     statusById === 'CLOSED' &&
-    (id === 'ffff3ef238ad' || id === 'ffffc1114592')
+    (id === '10f1f2ee8d51' || localName === 'Jeremi')
   ) {
     console.log('Stopping scan to connect to ', id)
     StatusesById.set(id, 'WAIT_TO_CONNECT')
@@ -169,7 +175,6 @@ noble.on('discover', device => {
     setTimeout(() => {
       openConn(device, id)
     }, 4000)
-
     // setTimeout(() => {
     //   console.log('Starting scan')
     //   noble.startScanning([], true)
@@ -182,7 +187,7 @@ function readCharacter(device, id) {
     (infoErr, services, characteristics) => {
       fs.writeFile(
         '/home/pi/device-logger/' + id + '-' + 'info',
-        stringify({ infoErr, services, characteristics }),
+        stringify({ infoErr, services, characteristics }, null, 2),
         writeFileErr => {
           if (writeFileErr) return console.log(writeFileErr)
         }
