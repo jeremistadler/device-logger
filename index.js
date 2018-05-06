@@ -130,6 +130,8 @@ noble.on('discover', device => {
       console.log('errors: ', err)
     })
 
+  return
+
   let statusById = StatusesById.get(id)
   if (statusById == null) {
     console.log(id, 'Added new device', localName)
@@ -165,20 +167,24 @@ noble.on('discover', device => {
     '10f1f2ee8d51', // Jeremis Telefon
   ]
 
+  const names = ['Jeremi']
+
   if (
     statusById === 'CLOSED' &&
-    (id === '10f1f2ee8d51' || localName === 'Jeremi')
+    (ids.includes(id) || names.includes(localName.trim()))
   ) {
     console.log('Stopping scan to connect to ', id)
     StatusesById.set(id, 'WAIT_TO_CONNECT')
     noble.stopScanning()
+
     setTimeout(() => {
       openConn(device, id)
     }, 4000)
-    // setTimeout(() => {
-    //   console.log('Starting scan')
-    //   noble.startScanning([], true)
-    // }, 5000)
+
+    setTimeout(() => {
+      console.log('Starting scan')
+      noble.startScanning([], true)
+    }, 6000)
   }
 })
 
