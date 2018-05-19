@@ -127,7 +127,7 @@ noble.on('discover', device => {
     })
     .catch(err => {
       // result === [[null, 'OK'], [null, 'bar']]
-      console.log('errors: ', err)
+      console.log('redis errors: ', err)
     })
 
   return
@@ -343,17 +343,69 @@ cmd.stdout.on('data', function(data) {
     .toString()
     .split('\n')
     .map(line => line.split('\t'))
-    .filter(parts => parts.length > 4)
-    .map(parts => ({
-      time: parseFloat(parts[0]),
-      packetType: parseInt(parts[1]),
-      ssid: parts[2],
-      bssid: parts[3],
-      deviceMac: parts[4],
-      freq: parts[5],
-      rssi: parseFloat(parts[6]),
-    }))
-  console.log(lines)
+    .filter(parts => parts.length > 5)
+
+  if (lines.length > 0) {
+    const pipeline = redis.pipeline()
+
+    lines.forEach(parts => {
+      const timeMs = parseFloat(parts[0]) * 100
+      const packetType = parseInt(parts[1])
+      const ssid = parts[2]
+      const bssid = parts[3]
+      const id = parts[4]
+      const freq = parts[5]
+      const rssi = parseFloat(parts[6])
+      const now = moment(timeMs)
+
+      const dateAndHour = now.format('YYYY-MM-DD HH')
+      const dateHourMinute = now.format('YYYY-MM-DD HH:mm')
+
+      pipeline.set(`wifi:last:byId:${id}:rssi`, rssi)
+      pipeline.set(`wifi:last:byId:${id}:bssid`, bssid)
+      pipeline.set(`wifi:last:byId:${id}:ssid`, ssid)
+      pipeline.set(`wifi:last:byId:${id}:date`, now.format())
+      pipeline.set(`wifi:last:byId:${id}:time`, now.valueOf())
+
+      pipeline.incr(`wifi:hits:byId:${id}`)
+      pipeline.incr(`wifi:hits:byHour:${dateAndHour}`)
+      pipeline.incr(`wifi:hits:byMinute:${dateHourMinute}`)
+      pipeline.incr(`wifi:hits:byIdHour:${id}:${dateAndHour}`)
+      pipeline.incr(`wifi:hits:byIdMinute:${id}:${dateHourMinute}`)
+      pipeline.incr(`wifi:hits:byHourId:${dateAndHour}:${id}`)
+      pipeline.incr(`wifi:hits:byMinuteId:${dateHourMinute}:${id}`)
+
+      pipeline.zadd(`wifi:rssi:byId:${id}`, now.valueOf(), rssi)
+      pipeline.zadd(`wifi:bssid:byId:${id}`, now.valueOf(), bssid)
+      pipeline.zadd(`wifi:freq:byId:${id}`, now.valueOf(), freq)
+      pipeline.zadd(`wifi:ssid:byId:${id}`, now.valueOf(), ssid)
+
+      pipeline.sadd(`wifi:id:seenByBssid:${bssid}`, id)
+      pipeline.sadd(`wifi:id:seenBySsid:${ssid}`, id)
+      pipeline.sadd(`wifi:id:seenByFreq:${freq}`, id)
+      pipeline.sadd(`wifi:id:all`, id)
+      pipeline.sadd(`wifi:ssid:seenById:${id}`, ssid)
+
+      pipeline.zadd(`wifi:firstSeen:idByTime`, 'NX', now.valueOf(), id)
+      pipeline.zadd(`wifi:lastSeen:idByTime`, now.valueOf(), id)
+      pipeline.hsetnx(`wifi:firstSeen:timeById`, id, now.valueOf())
+      pipeline.hset(`wifi:lastSeen:timeById`, id, now.valueOf())
+
+      pipeline.zincrby(`wifi:seenId`, 1, id)
+      pipeline.zincrby(`wifi:seenSsid`, 1, ssid)
+    })
+
+    pipeline
+      .exec()
+      .then(results => {
+        const errors = results.map(f => f[0]).filter(Boolean)
+        if (errors.length > 0) console.log('redis errors: ', errors)
+      })
+      .catch(err => {
+        // result === [[null, 'OK'], [null, 'bar']]
+        console.log('redis errors: ', err)
+      })
+  }
 })
 
 cmd.stderr.on('data', function(data) {
