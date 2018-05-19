@@ -353,7 +353,7 @@ cmd.stdout.on('data', function(data) {
     const pipeline = redis.pipeline()
 
     lines.forEach(parts => {
-      const timeMs = parseFloat(parts[0]) * 100
+      const timeMs = parseFloat(parts[0]) * 1000
       const packetType = parseInt(parts[1])
       const ssid = parts[2]
       const bssid = parts[3]
@@ -361,7 +361,6 @@ cmd.stdout.on('data', function(data) {
       const freq = parts[5]
       const rssi = parseFloat(parts[6])
       const now = moment(timeMs)
-      console.log(now.format(), timeMs)
 
       const dateAndHour = now.format('YYYY-MM-DD HH')
       const dateHourMinute = now.format('YYYY-MM-DD HH:mm')
