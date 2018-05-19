@@ -338,7 +338,22 @@ const cmd = spawn('/home/pi/tshark', [
 ])
 
 cmd.stdout.on('data', function(data) {
-  console.log('stdout: ' + data)
+  if (!data) return
+  const lines = data
+    .toString()
+    .split('\n')
+    .map(line => line.split('\t'))
+    .filter(parts => parts.length > 4)
+    .map(parts => ({
+      time: parseFloat(parts[0]),
+      packetType: parseInt(parts[1]),
+      ssid: parts[2],
+      bssid: parts[3],
+      deviceMac: parts[4],
+      freq: parts[5],
+      rssi: parseFloat(parts[6]),
+    }))
+  console.log(lines)
 })
 
 cmd.stderr.on('data', function(data) {
