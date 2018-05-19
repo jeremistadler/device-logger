@@ -347,6 +347,7 @@ cmd.stdout.on('data', function(data) {
 
   if (lines.length > 0) {
     const pipeline = redis.pipeline()
+    console.log('Adding ', lines.length, 'items')
 
     lines.forEach(parts => {
       const timeMs = parseFloat(parts[0]) * 100
@@ -400,6 +401,7 @@ cmd.stdout.on('data', function(data) {
       .then(results => {
         const errors = results.map(f => f[0]).filter(Boolean)
         if (errors.length > 0) console.log('redis errors: ', errors)
+        else console.log('Added ', results.length, 'items')
       })
       .catch(err => {
         // result === [[null, 'OK'], [null, 'bar']]
