@@ -10,6 +10,7 @@ const Redis = require('ioredis')
 const moment = require('moment')
 const stringify = require('fast-safe-stringify')
 const fs = require('fs')
+const spawn = require('child_process').spawn
 
 const StatusesById = new Map()
 
@@ -19,12 +20,11 @@ const redis = new Redis({
   password: 'hej123',
 })
 
-noble.on('stateChange', state => {
-  console.log('==== Changed state to', state)
-  if (state === 'poweredOn') {
-    noble.startScanning([], true)
-  }
-})
+// noble.on('stateChange', state => {
+//   console.log('==== Changed state to', state)
+//   if (state === 'poweredOn') noble.startScanning([], true)
+//   else noble.stopScanning()
+// })
 
 noble.on('warning', warning => console.log('Warn:', warning))
 noble.on('scanStart', () => console.log('Scan started'))
@@ -295,3 +295,56 @@ function openConn(device, id) {
     readCharacter(device, id)
   })
 }
+
+/*
+
+sudo /home/pi/tshark -i mon0 -f 'not multicast' -l -Y \
+'wlan.fc.type_subtype == 0x00 || wlan.fc.type_subtype == 0x01 || wlan.fc.type_subtype == 0x03 || wlan.fc.type_subtype == 0x02 || wlan.fc.type_subtype == 0x04 || wlan.fc.type_subtype == 0x05' \
+-T fields \
+-e frame.time_epoch \
+-e wlan.fc.type_subtype \
+-e wlan.ssid \
+-e wlan.sa \
+-e wlan.da \
+-e radiotap.channel.freq \
+-e radiotap.dbm_antsignal
+
+*/
+
+const cmd = spawn('/home/pi/tshark', [
+  '-i',
+  'mon0',
+  '-f',
+  'not multicast',
+  '-l',
+  '-Y',
+  'wlan.fc.type_subtype == 0x00 || wlan.fc.type_subtype == 0x01 || wlan.fc.type_subtype == 0x02 || wlan.fc.type_subtype == 0x03 || wlan.fc.type_subtype == 0x04 || wlan.fc.type_subtype == 0x05',
+  '-T',
+  'fields',
+  '-e',
+  'frame.time_epoch',
+  '-e',
+  'wlan.fc.type_subtype',
+  '-e',
+  'wlan.ssid',
+  '-e',
+  'wlan.sa',
+  '-e',
+  'wlan.da',
+  '-e',
+  'radiotap.channel.freq',
+  '-e',
+  'radiotap.dbm_antsignal',
+])
+
+cmd.stdout.on('data', function(data) {
+  console.log('stdout: ' + data)
+})
+
+cmd.stderr.on('data', function(data) {
+  console.log('stderr: ' + data)
+})
+
+cmd.on('exit', function(code) {
+  console.log('exit code: ' + code)
+})
