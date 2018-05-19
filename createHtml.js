@@ -37,12 +37,25 @@ function avg(arr) {
 function generate(req, res) {
   redis
     .smembers('id:all')
-    .then(ids => Promise.all([getAllRssi(ids), getAllNames(ids)]))
-    .then(([rssis, names]) => {
+    .then(ids =>
+      Promise.all([getAllRssi(ids), getAllNames(ids), getAllAddressTypes(ids)])
+    )
+    .then(([rssis, names, addressTypes]) => {
       rssis.forEach((item, index) => {
-        item.name = names[index]
+        if (item !== null) {
+          item.name = names[index]
+          item.addressType = addressTypes[index]
+        }
       })
-      return rssis
+      return rssis.filter(f => f !== null).filter(({ items }) => {
+        // if (
+        //   items.length === 1 ||
+        //   items[items.length - 1].time - items[0].time < HIDE_SHORTER_THEN
+        // )
+        //   return false
+
+        return true
+      })
     })
     .then(itemsToHtml)
     .then(html => {
@@ -52,32 +65,40 @@ function generate(req, res) {
 }
 
 function itemsToHtml(allItems) {
-  const maxTime = allItems.reduce(
+  const totalMaxTime = allItems.reduce(
     (a, b) => Math.max(a, b.maxTime),
     allItems[0].maxTime
   )
-  const minTime = allItems.reduce(
+  const totalMinTime = allItems.reduce(
     (a, b) => Math.min(a, b.minTime),
     allItems[0].minTime
   )
-  const diffTime = maxTime - minTime
-  const TOTAL_SLOTS = 600
+  const diffTime = totalMaxTime - totalMinTime
+  const TOTAL_SLOTS = 200
 
-  allItems.sort((a, b) => a.minTime - b.minTime)
+  allItems.sort((a, b) => {
+    if (a.name) return -1
+    if (b.name) return 1
+
+    if (a.timeDiff > HIDE_SHORTER_THEN) return -1
+    if (b.timeDiff > HIDE_SHORTER_THEN) return 1
+
+    return a.minTime - b.minTime
+  })
 
   return toHtml(
-    allItems.map(({ items, id, name }) => {
-      const line = [...new Array(TOTAL_SLOTS)].map(x => [])
-      items.forEach(item => {
+    allItems.map(item => {
+      item.buckets = [...new Array(TOTAL_SLOTS)].map(x => [])
+      item.items.forEach(point => {
         const pos = Math.floor(
-          (item.time - minTime) / diffTime * (TOTAL_SLOTS - 1)
+          (point.time - totalMinTime) / diffTime * (TOTAL_SLOTS - 1)
         )
-        line[pos].push(item)
+        item.buckets[pos].push(point)
       })
-      return { line, id, name }
+      return item
     }),
-    minTime,
-    maxTime
+    totalMinTime,
+    totalMaxTime
   )
 }
 
@@ -107,13 +128,12 @@ function idToHue(id) {
 function getAllRssi(ids) {
   const pipeline = redis.pipeline()
 
+  const firstTime = moment()
+    .subtract(200, 'hour')
+    .valueOf()
+
   ids.forEach(id =>
-    pipeline.zrangebyscore(
-      'rssi:byId:' + id,
-      1525219200000,
-      Infinity,
-      'WITHSCORES'
-    )
+    pipeline.zrangebyscore('rssi:byId:' + id, firstTime, Infinity, 'WITHSCORES')
   )
 
   return pipeline.exec().then(pipeResult => {
@@ -128,10 +148,13 @@ function getAllRssi(ids) {
         })
       }
 
+      if (items.length === 0) return null
+
       const maxTime = items.reduce((a, b) => Math.max(a, b.time), items[0].time)
       const minTime = items.reduce((a, b) => Math.min(a, b.time), items[0].time)
+      const timeDiff = maxTime - minTime
 
-      return { items, maxTime, minTime, id }
+      return { items, maxTime, minTime, timeDiff, id }
     })
   })
 }
@@ -154,11 +177,23 @@ function getAllNames(ids) {
   })
 }
 
+function getAllAddressTypes(ids) {
+  const pipeline = redis.pipeline()
+
+  ids.forEach(id => pipeline.get(`last:byId:${id}:addressType`))
+
+  return pipeline.exec().then(pipeResult => {
+    return pipeResult.map(f => f[1])
+  })
+}
+
 function timeToPercentage(min, max, value) {
   return (value - min) / (max - min) * 100
 }
 
-function toHtml(lines, minTime, maxTime) {
+const HIDE_SHORTER_THEN = 1000 * 60 * 30
+
+function toHtml(lines, totalMinTime, totalMaxTime) {
   return `<!DOCTYPE html>
         <html lang="en">
           <head>
@@ -179,16 +214,23 @@ function toHtml(lines, minTime, maxTime) {
                 height: 15px;
                 display: flex;
               }
+              .line:nth-child(even) {
+                background: #ecf3ff;
+              }
+              .line:hover {
+                background: #b8d9ff;
+              }
               .lineInner {
                 height: 15px;
                 position: relative;
                     flex: 1;
               }
               .name {
-                width: 160px;
+                width: 210px;
                 overflow: hidden;
                 white-space: nowrap;
                 text-overflow: ellipsis;
+                font-family: monospace;
               }
               .point {
                 position: absolute;
@@ -199,38 +241,90 @@ function toHtml(lines, minTime, maxTime) {
                 border-style: solid;
                 border-radius: 10px;
               }
+
+              .rssiPlotContainer {
+                margin: 10px;
+                position: relative;
+                height: 500px;
+                margin-top: 50px;
+              }
+              .rssiPlot > .point {
+                position: absolute;
+                top: 3px;
+                width: 5px;
+                height: 5px;
+                border-width: 0.5px;
+                border-style: solid;
+                border-radius: 10px;
+              }
             </style>
           </head>
           <body>
             <div class=items>
               ${lines
                 .map(
-                  ({ line, id, name }) => `
+                  ({ buckets, id, name, minTime, maxTime, addressType }) => `
                     <div class="line">
-                      <span class=name>${id} (${name})</span>
+                      <span class=name>${id}
+                        ${name ? `${name}` : ''}
+                        ${addressType}
+                      </span>
                       <div class="lineInner">
-                      ${line
+                      ${buckets
                         .filter(f => f.length > 0)
                         .map(
                           itemsAtPos => `<div class="point" style="
                           left: ${timeToPercentage(
-                            minTime,
-                            maxTime,
+                            totalMinTime,
+                            totalMaxTime,
                             avg(itemsAtPos.map(f => f.time))
                           )}%;
                         background-color: hsla(
-                          ${idToHue(id)},
+                          ${idToHue(addressType)},
                           50%, 50%,
                           ${normalizeRssi(avg(itemsAtPos.map(f => f.rssi)))}
                         );
-                        border-color: hsla(${idToHue(id)}, 50%, 50%, 0.6);
+                        border-color: hsla(${idToHue(
+                          addressType
+                        )}, 50%, 50%, 0.6);
                         "></div>`
                         )
                         .join('')}
                     </div></div>`
                 )
                 .join('')}
-            </div
+            </div>
+            <div class=rssiPlotContainer>
+              ${lines
+                .map(
+                  ({ buckets, id, name, addressType }) => `
+                      ${buckets
+                        .filter(f => f.length > 0)
+                        .map(
+                          itemsAtPos => `<div class="point" style="
+                          left: ${timeToPercentage(
+                            totalMinTime,
+                            totalMaxTime,
+                            avg(itemsAtPos.map(f => f.time))
+                          )}%;
+                          top: ${normalizeRssi(
+                            avg(itemsAtPos.map(f => f.rssi))
+                          ) * 100}%;
+                        background-color: hsla(
+                          ${idToHue(addressType)},
+                          50%, 50%,
+                          0.1
+                        );
+                        border-color: hsla(${idToHue(
+                          addressType
+                        )}, 50%, 50%, 0.6);
+                        "></div>`
+                        )
+                        .join('')}
+                    `
+                )
+                .join('')}
+            </div>
           </body>
         </html>`
 }
