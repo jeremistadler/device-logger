@@ -22,8 +22,8 @@ const redis = new Redis({
 
 noble.on('stateChange', state => {
   console.log('==== Changed state to', state)
-  // if (state === 'poweredOn') noble.startScanning([], true)
-  // else noble.stopScanning()
+  if (state === 'poweredOn') noble.startScanning([], true)
+  else noble.stopScanning()
 })
 
 noble.on('warning', warning => console.log('Warn:', warning))
