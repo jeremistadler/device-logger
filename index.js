@@ -365,6 +365,7 @@ cmd.stdout.on('data', function(data) {
       const id = parts[3] // Sender Address
       const id2 = parts[4] // Destination Address
       const id3 = parts[5] // Transmitter Address
+      const freq = parts[6]
       const rssiNoise = parseFloat(parts[7])
       const rssi = parseFloat(parts[8])
       const channel = parseInt(parts[9])
