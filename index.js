@@ -336,9 +336,15 @@ const cmd = spawn('/home/pi/tshark', [
   '-e',
   'wlan.da',
   '-e',
+  'wlan.ta',
+  '-e',
   'radiotap.channel.freq',
   '-e',
-  'radiotap.dbm_antsignal',
+  'wlan_radio.noise_dbm',
+  '-e',
+  'wlan_radio.signal_dbm',
+  '-e',
+  'wlan_radio.channel',
 ])
 
 cmd.stdout.on('data', function(data) {
@@ -356,20 +362,27 @@ cmd.stdout.on('data', function(data) {
       const timeMs = parseFloat(parts[0]) * 1000
       const packetType = parseInt(parts[1])
       const ssid = parts[2]
-      const bssid = parts[3]
-      const id = parts[4]
-      const freq = parts[5]
-      const rssi = parseFloat(parts[6])
+      const id = parts[3] // Sender Address
+      const id2 = parts[4] // Destination Address
+      const id3 = parts[5] // Transmitter Address
+      const rssiNoise = parseFloat(parts[7])
+      const rssi = parseFloat(parts[8])
+      const channel = parseInt(parts[9])
+
       const now = moment(timeMs)
 
       const dateAndHour = now.format('YYYY-MM-DD HH')
       const dateHourMinute = now.format('YYYY-MM-DD HH:mm')
 
-      pipeline.set(`wifi:last:byId:${id}:rssi`, rssi)
-      pipeline.set(`wifi:last:byId:${id}:bssid`, bssid)
-      pipeline.set(`wifi:last:byId:${id}:ssid`, ssid)
-      pipeline.set(`wifi:last:byId:${id}:date`, now.format())
-      pipeline.set(`wifi:last:byId:${id}:time`, now.valueOf())
+      pipeline.sadd(`wifi:sender:all`, id)
+      pipeline.sadd(`wifi:destination:all`, id2)
+      pipeline.sadd(`wifi:transmitter:all`, id3)
+
+      pipeline.zadd(`wifi:sender:rssi:${id}`, now.valueOf(), rssi)
+
+      pipeline.zadd(`wifi:sender:ssid:${id}`, now.valueOf(), ssid)
+      pipeline.zadd(`wifi:destination:ssid:${id2}`, now.valueOf(), ssid)
+      pipeline.zadd(`wifi:transmitter:ssid:${id3}`, now.valueOf(), ssid)
 
       pipeline.incr(`wifi:hits:byId:${id}`)
       pipeline.incr(`wifi:hits:byHour:${dateAndHour}`)
@@ -380,11 +393,11 @@ cmd.stdout.on('data', function(data) {
       pipeline.incr(`wifi:hits:byMinuteId:${dateHourMinute}:${id}`)
 
       pipeline.zadd(`wifi:rssi:byId:${id}`, now.valueOf(), rssi)
-      pipeline.zadd(`wifi:bssid:byId:${id}`, now.valueOf(), bssid)
+      pipeline.zadd(`wifi:bssid:byId:${id}`, now.valueOf(), id2)
       pipeline.zadd(`wifi:freq:byId:${id}`, now.valueOf(), freq)
       pipeline.zadd(`wifi:ssid:byId:${id}`, now.valueOf(), ssid)
 
-      pipeline.sadd(`wifi:id:seenByBssid:${bssid}`, id)
+      pipeline.sadd(`wifi:id:seenByBssid:${id2}`, id)
       pipeline.sadd(`wifi:id:seenBySsid:${ssid}`, id)
       pipeline.sadd(`wifi:id:seenByFreq:${freq}`, id)
       pipeline.sadd(`wifi:id:all`, id)

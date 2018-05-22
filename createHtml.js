@@ -13,7 +13,7 @@ const redis = new Redis({
   connectionName: 'Vizualizer',
   dropBufferSupport: true,
   password: 'hej123',
-  host: '192.168.1.201',
+  host: '192.168.191.82',
 })
 
 app.get('/', (request, response) => {
@@ -36,7 +36,7 @@ function avg(arr) {
 
 function generate(req, res) {
   redis
-    .smembers('id:all')
+    .smembers('wifi:id:all')
     .then(ids =>
       Promise.all([getAllRssi(ids), getAllNames(ids), getAllAddressTypes(ids)])
     )
@@ -77,11 +77,11 @@ function itemsToHtml(allItems) {
   const TOTAL_SLOTS = 200
 
   allItems.sort((a, b) => {
-    if (a.name) return -1
-    if (b.name) return 1
-
-    if (a.timeDiff > HIDE_SHORTER_THEN) return -1
-    if (b.timeDiff > HIDE_SHORTER_THEN) return 1
+    // if (a.name) return -1
+    // if (b.name) return 1
+    //
+    // if (a.timeDiff > HIDE_SHORTER_THEN) return -1
+    // if (b.timeDiff > HIDE_SHORTER_THEN) return 1
 
     return a.minTime - b.minTime
   })
@@ -133,7 +133,12 @@ function getAllRssi(ids) {
     .valueOf()
 
   ids.forEach(id =>
-    pipeline.zrangebyscore('rssi:byId:' + id, firstTime, Infinity, 'WITHSCORES')
+    pipeline.zrangebyscore(
+      'wifi:rssi:byId:' + id,
+      firstTime,
+      Infinity,
+      'WITHSCORES'
+    )
   )
 
   return pipeline.exec().then(pipeResult => {
@@ -162,7 +167,7 @@ function getAllRssi(ids) {
 function getAllNames(ids) {
   const pipeline = redis.pipeline()
 
-  ids.forEach(id => pipeline.zrange('localname:byId:' + id, 0, -1))
+  ids.forEach(id => pipeline.zrange('wifi:ssid:byId:' + id, 0, -1))
 
   return pipeline.exec().then(pipeResult => {
     return pipeResult.map(f => f[1]).map((names, index) => {
@@ -226,13 +231,13 @@ function toHtml(lines, totalMinTime, totalMaxTime) {
                     flex: 1;
               }
               .name {
-                width: 210px;
+                width: 340px;
                 overflow: hidden;
                 white-space: nowrap;
                 text-overflow: ellipsis;
                 font-family: monospace;
               }
-              .point {
+              .line .point {
                 position: absolute;
                 top: 3px;
                 width: 10px;
@@ -244,18 +249,25 @@ function toHtml(lines, totalMinTime, totalMaxTime) {
 
               .rssiPlotContainer {
                 margin: 10px;
+                margin-bottom: 50px;
                 position: relative;
                 height: 500px;
                 margin-top: 50px;
+                border-bottom: 1px solid black;
+                border-top: 1px solid black;
               }
-              .rssiPlot > .point {
+              .rssiPlotContainer > .point {
                 position: absolute;
                 top: 3px;
-                width: 5px;
-                height: 5px;
-                border-width: 0.5px;
-                border-style: solid;
-                border-radius: 10px;
+                width: 3px;
+                height: 3px;
+                //border-width: 0.5px;
+                //border-style: solid;
+                //border-radius: 10px;
+              }
+              .rssiPlotContainer .axisLabel {
+                position: absolute;
+
               }
             </style>
           </head>
@@ -263,11 +275,10 @@ function toHtml(lines, totalMinTime, totalMaxTime) {
             <div class=items>
               ${lines
                 .map(
-                  ({ buckets, id, name, minTime, maxTime, addressType }) => `
+                  ({ buckets, id, name, minTime, maxTime }) => `
                     <div class="line">
                       <span class=name>${id}
                         ${name ? `${name}` : ''}
-                        ${addressType}
                       </span>
                       <div class="lineInner">
                       ${buckets
@@ -280,13 +291,11 @@ function toHtml(lines, totalMinTime, totalMaxTime) {
                             avg(itemsAtPos.map(f => f.time))
                           )}%;
                         background-color: hsla(
-                          ${idToHue(addressType)},
+                          ${idToHue(name)},
                           50%, 50%,
                           ${normalizeRssi(avg(itemsAtPos.map(f => f.rssi)))}
                         );
-                        border-color: hsla(${idToHue(
-                          addressType
-                        )}, 50%, 50%, 0.6);
+                        border-color: hsla(${idToHue(name)}, 50%, 50%, 0.6);
                         "></div>`
                         )
                         .join('')}
@@ -297,7 +306,7 @@ function toHtml(lines, totalMinTime, totalMaxTime) {
             <div class=rssiPlotContainer>
               ${lines
                 .map(
-                  ({ buckets, id, name, addressType }) => `
+                  ({ buckets, id, name }) => `
                       ${buckets
                         .filter(f => f.length > 0)
                         .map(
@@ -311,19 +320,22 @@ function toHtml(lines, totalMinTime, totalMaxTime) {
                             avg(itemsAtPos.map(f => f.rssi))
                           ) * 100}%;
                         background-color: hsla(
-                          ${idToHue(addressType)},
+                          ${idToHue(name)},
                           50%, 50%,
-                          0.1
+                          0.5
                         );
-                        border-color: hsla(${idToHue(
-                          addressType
-                        )}, 50%, 50%, 0.6);
+                        //border-color: hsla(${idToHue(name)}, 50%, 50%, 0.6);
                         "></div>`
                         )
                         .join('')}
                     `
                 )
                 .join('')}
+              <span class="axisLabel" style="top: 0%">0 dB</span>
+              <span class="axisLabel" style="top: 25%">-25 dB</span>
+              <span class="axisLabel" style="top: 50%">-50 dB</span>
+              <span class="axisLabel" style="top: 75%">-75 dB</span>
+              <span class="axisLabel" style="top: 100%">-100 dB</span>
             </div>
           </body>
         </html>`
