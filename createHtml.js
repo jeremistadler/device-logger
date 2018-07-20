@@ -65,10 +65,7 @@ function generate(req, res) {
 }
 
 function itemsToHtml(allItems) {
-  const totalMaxTime = allItems.reduce(
-    (a, b) => Math.max(a, b.maxTime),
-    allItems[0].maxTime
-  )
+  const totalMaxTime = Date.now()
   const totalMinTime = allItems.reduce(
     (a, b) => Math.min(a, b.minTime),
     allItems[0].minTime
@@ -129,7 +126,7 @@ function getAllRssi(ids) {
   const pipeline = redis.pipeline()
 
   const firstTime = moment()
-    .subtract(200, 'hour')
+    .subtract(1000, 'hour')
     .valueOf()
 
   ids.forEach(id =>
