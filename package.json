@@ -12,12 +12,12 @@
   "dependencies": {
     "fast-safe-stringify": "^2.0.4",
     "ioredis": "^3.2.2",
-    "moment": "^2.22.1",
+    "moment": "^2.22.2",
     "noble": "^1.9.1"
   },
   "devDependencies": {
     "express": "^4.16.3",
-    "nodemon": "^1.17.3",
-    "prettier": "^1.12.1"
+    "nodemon": "^1.18.3",
+    "prettier": "^1.13.7"
   }
 }

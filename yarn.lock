@@ -1374,9 +1374,9 @@ mixin-deep@^1.2.0:
   dependencies:
     minimist "0.0.8"
 
-moment@^2.22.1:
-  version "2.22.1"
-  resolved "https://registry.yarnpkg.com/moment/-/moment-2.22.1.tgz#529a2e9bf973f259c9643d237fda84de3a26e8ad"
+moment@^2.22.2:
+  version "2.22.2"
+  resolved "https://registry.yarnpkg.com/moment/-/moment-2.22.2.tgz#3c257f9839fc0e93ff53149632239eb90783ff66"
 
 ms@0.7.1:
   version "0.7.1"
@@ -1460,9 +1460,9 @@ node-pre-gyp@^0.9.0:
     semver "^5.3.0"
     tar "^4"
 
-nodemon@^1.17.3:
-  version "1.17.3"
-  resolved "https://registry.yarnpkg.com/nodemon/-/nodemon-1.17.3.tgz#3b0bbc2ee05ccb43b1aef15ba05c63c7bc9b8530"
+nodemon@^1.18.3:
+  version "1.18.3"
+  resolved "https://registry.yarnpkg.com/nodemon/-/nodemon-1.18.3.tgz#46e681ee0dd1b590562e03019b4c5df234f906f9"
   dependencies:
     chokidar "^2.0.2"
     debug "^3.1.0"
@@ -1642,9 +1642,9 @@ prepend-http@^1.0.1:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/prepend-http/-/prepend-http-1.0.4.tgz#d4f4562b0ce3696e41ac52d0e002e57a635dc6dc"
 
-prettier@^1.12.1:
-  version "1.12.1"
-  resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.12.1.tgz#c1ad20e803e7749faf905a409d2367e06bbe7325"
+prettier@^1.13.7:
+  version "1.13.7"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.13.7.tgz#850f3b8af784a49a6ea2d2eaa7ed1428a34b7281"
 
 process-nextick-args@~2.0.0:
   version "2.0.0"
